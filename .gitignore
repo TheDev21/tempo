@@ -4,3 +4,5 @@ data/backups/
 .env
 *.log
 .DS_Store
+data/*.db-shm
+data/*.db-wal
