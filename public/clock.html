@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clock In — Tempo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f5f7;
+      --surface: #ffffff;
+      --text: #1d1d1f;
+      --text2: #6e6e73;
+      --text3: #86868b;
+      --border: #d2d2d7;
+      --border2: #e8e8ed;
+      --accent: #0071e3;
+      --accent-hover: #0077ed;
+      --green: #34c759;
+      --green-bg: rgba(52,199,89,0.1);
+      --red: #ff3b30;
+      --font: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* HEADER */
+    header {
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      background: rgba(255,255,255,0.82);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 1px solid var(--border2);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo { font-size: 1.1rem; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+
+    .live-clock {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text3);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.01em;
+    }
+
+    /* SCREENS */
+    .screen {
+      display: none;
+      flex: 1;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 1.5rem;
+      min-height: calc(100vh - 52px);
+    }
+    .screen.active { display: flex; }
+
+    /* ── SELECT ── */
+    .select-wrap { width: 100%; max-width: 700px; }
+
+    .select-header { margin-bottom: 2rem; }
+
+    .select-header h1 {
+      font-size: clamp(1.6rem, 3.5vw, 2rem);
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--text);
+      margin-bottom: 0.3rem;
+    }
+
+    .select-header p { font-size: 0.875rem; color: var(--text3); }
+
+    .emp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .emp-card {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 16px;
+      padding: 1.5rem 1rem 1.25rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .emp-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 20px rgba(0,113,227,0.1);
+      transform: translateY(-2px);
+    }
+
+    .emp-card:active { transform: scale(0.97); box-shadow: none; }
+
+    .emp-avatar {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff;
+      margin: 0 auto 0.875rem;
+    }
+
+    .emp-name {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.4rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.2rem 0.6rem;
+      border-radius: 100px;
+    }
+
+    .pill-in { background: var(--green-bg); color: var(--green); }
+    .pill-out { background: rgba(0,0,0,0.05); color: var(--text3); }
+
+    .status-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+    }
+    .dot-green { background: var(--green); }
+    .dot-gray { background: var(--text3); }
+
+    /* ── PIN ── */
+    .pin-wrap { width: 100%; max-width: 340px; text-align: center; }
+
+    .pin-avatar {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+      margin: 0 auto 1rem;
+    }
+
+    .pin-name {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      margin-bottom: 0.25rem;
+    }
+
+    .pin-sub { font-size: 0.84rem; color: var(--text3); }
+
+    .setup-notice {
+      display: inline-block;
+      background: rgba(255,159,10,0.08);
+      border: 1px solid rgba(255,159,10,0.2);
+      color: var(--yellow, #ff9f0a);
+      border-radius: 8px;
+      padding: 0.4rem 0.9rem;
+      font-size: 0.74rem;
+      font-weight: 500;
+      margin-top: 0.6rem;
+    }
+
+    .pin-dots {
+      display: flex;
+      gap: 0.9rem;
+      justify-content: center;
+      margin: 1.75rem 0 0.5rem;
+    }
+
+    .pin-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border);
+      background: transparent;
+      transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .pin-dot.filled {
+      background: var(--text);
+      border-color: var(--text);
+      transform: scale(1.1);
+    }
+
+    .pin-error {
+      font-size: 0.78rem;
+      color: var(--red);
+      min-height: 1.4rem;
+      margin: 0.5rem 0 1.25rem;
+    }
+
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.55rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .key {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 14px;
+      padding: 1.2rem 1rem;
+      font-family: var(--font);
+      font-size: 1.5rem;
+      font-weight: 400;
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.1s, transform 0.1s;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .key:hover { background: var(--border2); }
+    .key:active { background: var(--border); transform: scale(0.93); }
+    .key.del { font-size: 0.8rem; color: var(--text2); font-weight: 500; }
+    .key.empty { visibility: hidden; pointer-events: none; }
+
+    .btn-back {
+      background: transparent;
+      border: none;
+      color: var(--accent);
+      font-family: var(--font);
+      font-size: 0.875rem;
+      cursor: pointer;
+      padding: 0.4rem;
+      transition: opacity 0.15s;
+    }
+    .btn-back:hover { opacity: 0.7; }
+
+    /* ── CONFIRM ── */
+    .confirm-wrap {
+      text-align: center;
+      animation: confirmIn 0.4s cubic-bezier(0.34, 1.4, 0.64, 1);
+    }
+
+    @keyframes confirmIn {
+      from { opacity: 0; transform: scale(0.88) translateY(12px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    .confirm-circle {
+      width: 84px; height: 84px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.75rem;
+    }
+
+    .confirm-circle.in { background: var(--green-bg); }
+    .confirm-circle.out { background: rgba(0,113,227,0.08); }
+
+    .confirm-circle svg { width: 32px; height: 32px; }
+
+    .confirm-title {
+      font-size: 1.9rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      margin-bottom: 0.35rem;
+    }
+
+    .confirm-name { font-size: 1rem; color: var(--text2); margin-bottom: 0.2rem; }
+    .confirm-time { font-size: 0.84rem; color: var(--text3); }
+
+    .progress-track {
+      width: 160px;
+      height: 2px;
+      background: var(--border2);
+      border-radius: 100px;
+      margin: 2rem auto 0;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 100px;
+      animation: shrink 3s linear forwards;
+    }
+
+    @keyframes shrink { from { width: 100%; } to { width: 0%; } }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text3);
+      font-size: 0.875rem;
+      grid-column: 1 / -1;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">Tempo</div>
+    <div class="live-clock" id="liveClock"></div>
+  </header>
+
+  <!-- SELECT -->
+  <div class="screen active" id="screenSelect">
+    <div class="select-wrap">
+      <div class="select-header">
+        <h1>Tap your name</h1>
+        <p>Find your name below and tap it</p>
+      </div>
+      <div class="emp-grid" id="empGrid">
+        <div class="empty-state">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PIN -->
+  <div class="screen" id="screenPin">
+    <div class="pin-wrap">
+      <div class="pin-avatar" id="pinAvatar"></div>
+      <div class="pin-name" id="pinName"></div>
+      <div class="pin-sub" id="pinSub">Type your 4-digit PIN</div>
+      <div class="setup-notice" id="setupNotice" style="display:none">First time here? Pick a 4-digit PIN you will remember.</div>
+
+      <div class="pin-dots">
+        <div class="pin-dot" id="d0"></div>
+        <div class="pin-dot" id="d1"></div>
+        <div class="pin-dot" id="d2"></div>
+        <div class="pin-dot" id="d3"></div>
+      </div>
+
+      <div class="pin-error" id="pinError"></div>
+
+      <div class="keypad">
+        <button class="key" data-k="1">1</button>
+        <button class="key" data-k="2">2</button>
+        <button class="key" data-k="3">3</button>
+        <button class="key" data-k="4">4</button>
+        <button class="key" data-k="5">5</button>
+        <button class="key" data-k="6">6</button>
+        <button class="key" data-k="7">7</button>
+        <button class="key" data-k="8">8</button>
+        <button class="key" data-k="9">9</button>
+        <button class="key empty"></button>
+        <button class="key" data-k="0">0</button>
+        <button class="key del" id="delKey">Delete</button>
+      </div>
+
+      <button class="btn-back" id="backBtn">Back</button>
+    </div>
+  </div>
+
+  <!-- CONFIRM -->
+  <div class="screen" id="screenConfirm">
+    <div class="confirm-wrap">
+      <div class="confirm-circle" id="confirmCircle">
+        <svg id="confirmIcon" viewBox="0 0 32 32" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></svg>
+      </div>
+      <div class="confirm-title" id="confirmTitle"></div>
+      <div class="confirm-name" id="confirmName"></div>
+      <div class="confirm-time" id="confirmTime"></div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+  </div>
+
+  <script>
+    const bizId = window.location.pathname.split('/clock/')[1];
+    let selected = null, pin = '', pinMode = 'verify', setupPin = '';
+
+    const avatarColors = [
+      'linear-gradient(135deg,#0071e3,#6E35A8)',
+      'linear-gradient(135deg,#34c759,#248a3d)',
+      'linear-gradient(135deg,#ff6961,#c0392b)',
+      'linear-gradient(135deg,#ff9f0a,#c27504)',
+      'linear-gradient(135deg,#5856d6,#3634a3)',
+      'linear-gradient(135deg,#32ade6,#1a7a9e)',
+    ];
+
+    // Live clock
+    const tick = () => {
+      document.getElementById('liveClock').textContent =
+        new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    };
+    setInterval(tick, 1000);
+    tick();
+
+    async function loadEmps() {
+      const emps = await fetch(`/api/clock/${bizId}/employees`).then(r => r.json());
+      const grid = document.getElementById('empGrid');
+      if (!emps.length) {
+        grid.innerHTML = '<div class="empty-state">No employees have been added yet.</div>';
+        return;
+      }
+      grid.innerHTML = emps.map(e => {
+        const bg = avatarColors[e.id % avatarColors.length];
+        const isIn = e.status === 'Clocked In';
+        return `
+          <div class="emp-card" onclick="selectEmp(${e.id},'${e.name.replace(/'/g,"\\'")}','${e.status}','${bg}')">
+            <div class="emp-avatar" style="background:${bg}">${e.name.charAt(0).toUpperCase()}</div>
+            <div class="emp-name">${e.name}</div>
+            <span class="status-pill ${isIn ? 'pill-in' : 'pill-out'}">
+              <span class="status-dot ${isIn ? 'dot-green' : 'dot-gray'}"></span>
+              ${isIn ? 'Clocked in' : 'Clocked out'}
+            </span>
+          </div>`;
+      }).join('');
+    }
+
+    function selectEmp(id, name, status, bg) {
+      selected = { id, name, status };
+      pin = ''; setupPin = ''; pinMode = 'verify';
+      document.getElementById('pinAvatar').style.background = bg;
+      document.getElementById('pinAvatar').textContent = name.charAt(0).toUpperCase();
+      document.getElementById('pinName').textContent = name;
+      document.getElementById('pinSub').textContent = 'Enter your 4-digit PIN';
+      document.getElementById('setupNotice').style.display = 'none';
+      document.getElementById('pinError').textContent = '';
+      updateDots();
+      show('screenPin');
+
+      fetch(`/api/clock/${bizId}/verify-pin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employee_id: id, pin: '----' }),
+      }).then(r => r.json()).then(d => {
+        if (d.needs_setup) {
+          pinMode = 'setup';
+          document.getElementById('pinSub').textContent = 'Create your 4-digit PIN';
+          document.getElementById('setupNotice').style.display = 'inline-block';
+        }
+      });
+    }
+
+    function show(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function updateDots() {
+      for (let i = 0; i < 4; i++) {
+        document.getElementById('d' + i).classList.toggle('filled', i < pin.length);
+      }
+    }
+
+    document.querySelectorAll('.key[data-k]').forEach(k => {
+      k.addEventListener('click', () => {
+        if (pin.length >= 4) return;
+        pin += k.dataset.k;
+        updateDots();
+        document.getElementById('pinError').textContent = '';
+        if (pin.length === 4) setTimeout(handlePin, 100);
+      });
+    });
+
+    document.getElementById('delKey').addEventListener('click', () => {
+      pin = pin.slice(0, -1);
+      updateDots();
+    });
+
+    document.getElementById('backBtn').addEventListener('click', () => {
+      show('screenSelect');
+      loadEmps();
+    });
+
+    async function handlePin() {
+      const entered = pin;
+      pin = ''; updateDots();
+
+      if (pinMode === 'setup') {
+        setupPin = entered;
+        pinMode = 'setup-confirm';
+        document.getElementById('pinSub').textContent = 'Confirm your PIN';
+        document.getElementById('setupNotice').style.display = 'none';
+        return;
+      }
+
+      if (pinMode === 'setup-confirm') {
+        if (entered !== setupPin) {
+          document.getElementById('pinError').textContent = "PINs don't match. Try again.";
+          pinMode = 'setup';
+          setupPin = '';
+          document.getElementById('pinSub').textContent = 'Create your 4-digit PIN';
+          document.getElementById('setupNotice').style.display = 'inline-block';
+          return;
+        }
+        const r = await fetch(`/api/clock/${bizId}/create-pin`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ employee_id: selected.id, pin: entered }),
+        });
+        if (!r.ok) {
+          document.getElementById('pinError').textContent = 'Failed to save PIN. Try again.';
+          return;
+        }
+        clockAction(entered);
+        return;
+      }
+
+      clockAction(entered);
+    }
+
+    async function clockAction(entered) {
+      const res = await fetch(`/api/clock/${bizId}/clock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employee_id: selected.id, pin: entered }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        pin = ''; updateDots();
+        document.getElementById('pinError').textContent = data.error || 'Incorrect PIN';
+        return;
+      }
+
+      const isIn = data.type === 'clock-in';
+      const circle = document.getElementById('confirmCircle');
+      const icon = document.getElementById('confirmIcon');
+
+      circle.className = `confirm-circle ${isIn ? 'in' : 'out'}`;
+      icon.setAttribute('stroke', isIn ? '#34c759' : '#0071e3');
+
+      if (isIn) {
+        icon.innerHTML = '<polyline points="6,16 12,22 26,10"/>';
+      } else {
+        icon.innerHTML = '<polyline points="6,16 12,22 26,10"/>';
+      }
+
+      document.getElementById('confirmTitle').textContent = isIn ? 'Clocked in' : 'Clocked out';
+      document.getElementById('confirmName').textContent = data.name;
+      document.getElementById('confirmTime').textContent = data.time;
+
+      const fill = document.getElementById('progressFill');
+      fill.style.animation = 'none';
+      fill.offsetHeight;
+      fill.style.animation = '';
+
+      show('screenConfirm');
+      setTimeout(() => { show('screenSelect'); loadEmps(); }, 3000);
+    }
+
+    loadEmps();
+  </script>
+</body>
+</html>
