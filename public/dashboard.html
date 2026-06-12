@@ -626,6 +626,7 @@
       ['recStart','recEnd','payStart','payEnd'].forEach(id => document.getElementById(id).value = today);
       loadStats();
       loadEmployees();
+      loadRecords();
     }
 
     // TABS
@@ -652,10 +653,18 @@
     });
 
     async function loadStats() {
-      const s = await fetch('/api/stats').then(r => r.json());
-      document.getElementById('statTotal').textContent = s.totalEmployees;
-      document.getElementById('statIn').textContent = s.clockedIn;
-      document.getElementById('statToday').textContent = s.todayRecords;
+      try {
+        const res = await fetch('/api/stats');
+        if (!res.ok) throw new Error('stats failed');
+        const s = await res.json();
+        document.getElementById('statTotal').textContent = s.totalEmployees ?? 0;
+        document.getElementById('statIn').textContent = s.clockedIn ?? 0;
+        document.getElementById('statToday').textContent = s.todayRecords ?? 0;
+      } catch {
+        document.getElementById('statTotal').textContent = '0';
+        document.getElementById('statIn').textContent = '0';
+        document.getElementById('statToday').textContent = '0';
+      }
     }
 
     async function loadEmployees() {
